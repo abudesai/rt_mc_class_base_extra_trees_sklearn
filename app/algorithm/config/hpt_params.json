@@ -36,7 +36,7 @@
     "type": "int",
     "search_type": "uniform",
     "range_low": 2,
-    "range_high": 20,
+    "range_high": 10,
     "run_HPO": true
   }
 ]

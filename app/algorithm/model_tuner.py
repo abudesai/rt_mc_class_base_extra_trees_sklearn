@@ -6,6 +6,7 @@ import math
 from skopt import gp_minimize
 from skopt.space import Real, Categorical, Integer
 from skopt.utils import use_named_args
+from skopt.callbacks import EarlyStopper, DeltaYStopper
 
 import os
 import warnings
@@ -86,6 +87,11 @@ def clear_hp_results_dir(results_path):
         os.makedirs(results_path)
         
 
+class EarlyStopperIfOptimal(EarlyStopper): 
+    def _criterion(self, result):
+        return result.fun == -1.0
+        
+
 def tune_hyperparameters(data, data_schema, num_trials, hyper_param_path, hpt_results_path):  
     # read hpt_specs file 
     hpt_specs = utils.get_hpt_specs()
@@ -119,7 +125,8 @@ def tune_hyperparameters(data, data_schema, num_trials, hyper_param_path, hpt_re
     
     # Scikit-optimize objective function
     @use_named_args(hpt_space)
-    def objective(**hyperparameters):       
+    def objective(**hyperparameters):    
+        print(hyperparameters)   
         
         """Build a model from this hyper parameter permutation and evaluate its performance"""
         # train model
@@ -128,7 +135,8 @@ def tune_hyperparameters(data, data_schema, num_trials, hyper_param_path, hpt_re
         # evaluate the model
         score = model.evaluate(valid_X, valid_y)    # accuracy
         # Our optimizing metric is the model loss fn
-        opt_metric = np.round(score, 5)   # accuracy
+        # adding a small random noise, because scikit-optimize crashes if metric remains unchanged for initial trials
+        opt_metric = np.round(score + np.random.normal(0, 1e-4), 6)   # accuracy
         if np.isnan(opt_metric) or math.isinf(opt_metric): opt_metric = 1.0e5     # sometimes loss becomes inf, so use a large value
         # create a unique model name for the trial - we add loss into file name 
         # so we can later sort by file names, and get the best score file without reading each file   
@@ -149,7 +157,10 @@ def tune_hyperparameters(data, data_schema, num_trials, hyper_param_path, hpt_re
     
     
     n_initial_points = int(max(1, min(num_trials/3, 5)))
+    print("n_initial_points", n_initial_points)
     n_calls = max(2, num_trials)  # gp_minimize needs at least 2 trials, or it throws an error
+    early_stopper = EarlyStopperIfOptimal()
+    delta_y_stopper = DeltaYStopper(delta=1e-5, n_best=4)
     gp_ = gp_minimize(
         objective, # the objective function to minimize
         hpt_space, # the hyperparameter space
@@ -157,7 +168,8 @@ def tune_hyperparameters(data, data_schema, num_trials, hyper_param_path, hpt_re
         acq_func='EI', # the acquisition function
         n_initial_points=n_initial_points,
         n_calls=n_calls, # the number of total evaluations of f(x), including n_initial_points
-        random_state=0
+        random_state=0,
+        callback=[early_stopper, delta_y_stopper]
     )
     
     end = time.time()
