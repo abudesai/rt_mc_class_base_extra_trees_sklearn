@@ -28,15 +28,5 @@
     "range_low": 1,
     "range_high": 10,
     "run_HPO": true
-  },
-  {
-    "name": "max_depth",
-    "short_desc": "Maximum depth of the individual decision trees.",
-    "default": 5,
-    "type": "int",
-    "search_type": "uniform",
-    "range_low": 2,
-    "range_high": 10,
-    "run_HPO": true
   }
 ]
