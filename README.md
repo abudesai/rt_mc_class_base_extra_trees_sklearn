@@ -1,7 +1,6 @@
 Extra Trees Classifier in SciKitLearn for Multi-class Classification - Base problem category as per Ready Tensor specifications.
 
-- support vector machine
-- support vector classifier
+- extra trees classifier
 - multi-class classification
 - sklearn
 - python
